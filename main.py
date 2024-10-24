@@ -13,7 +13,7 @@ load_dotenv()
 
 def prompt(comentarios):
     return f"""{comentarios}
-    crie um resumo das avaliações do produto"""
+    crie um resumo das avaliações do produto em texto simples e corrido"""
     
 def gerar_resumo(comentarios):
     genai.configure(api_key=os.getenv('API_KEY'))
@@ -146,7 +146,7 @@ def get_reviews():
 
     if not reviews:
         return jsonify({
-            'resumo_avaliacao': 'Nenhum resumo disponível.',
+            'resumo_avaliacao': 'Não há avaliações suficientes para analisar.',
             'media': 0,
             'avaliacoes': []
         }), 200
@@ -156,15 +156,34 @@ def get_reviews():
 
     resumo_avaliacao = cache.get(produto_id)
     if not resumo_avaliacao:
-        comentarios = filtrar_comentarios(reviews)
-        resumo_avaliacao = gerar_resumo(comentarios)
-        cache[produto_id] = resumo_avaliacao
-
-    return jsonify({
-        'resumo_avaliacao': resumo_avaliacao,
-        'media': media_nota,
-        'avaliacoes': reviews
-    }), 200
+      if len(reviews) >= 5:
+          # Filtra os comentários e gera o resumo apenas se há mais de 5 avaliações
+          comentarios = filtrar_comentarios(reviews)
+          resumo_avaliacao = gerar_resumo(comentarios)
+          
+          # Armazena o resumo gerado no cache para futuras consultas
+          cache[produto_id] = resumo_avaliacao
+          
+          # Retorna o resumo, média de notas e avaliações
+          return jsonify({
+              'resumo_avaliacao': resumo_avaliacao,
+              'media': media_nota,
+              'avaliacoes': reviews
+          }), 200
+      else:
+          # Caso não haja avaliações suficientes
+          return jsonify({
+              'resumo_avaliacao': "Não há avaliações suficientes para analisar.",
+              'media': media_nota,
+              'avaliacoes': reviews
+          }), 200
+    else:
+      # Se o resumo já estiver disponível, apenas retorna os dados do cache
+      return jsonify({
+          'resumo_avaliacao': resumo_avaliacao,
+          'media': media_nota,
+          'avaliacoes': reviews
+      }), 200
     
     
 @app.route('/search_words_reviews', methods=['GET'])
